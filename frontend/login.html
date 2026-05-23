@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Login — ShopX</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<nav class="navbar"><a href="/" class="logo">Shop<span style="color:#ec4899">X</span></a>
+<div class="nav-actions"><button class="btn btn-outline" onclick="location.href='/'"><i class="fa fa-home"></i> Home</button></div></nav>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div class="logo" style="font-size:2.5rem;margin-bottom:.5rem">Shop<span style="color:#ec4899">X</span></div>
+      <p style="color:var(--text2)">Welcome back! Sign in to continue.</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="loginTab" onclick="switchTab('login')">Login</button>
+      <button class="auth-tab" id="registerTab" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="loginForm">
+      <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="you@example.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+      <button class="btn btn-primary" style="width:100%;padding:.9rem;font-size:1rem;margin-top:.5rem" onclick="doLogin()" id="loginBtn">
+        <i class="fa fa-sign-in-alt"></i> Login
+      </button>
+      <p style="text-align:center;margin-top:1rem;color:var(--text2);font-size:.85rem">
+        Don't have an account? <a href="#" onclick="switchTab('register')" style="color:var(--accent2)">Register</a>
+      </p>
+    </div>
+
+    <!-- Register Form -->
+    <div id="registerForm" style="display:none">
+      <div class="form-group"><label>Full Name</label><input type="text" id="regName" placeholder="John Doe"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="you@example.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="regPassword" placeholder="Min 6 characters"></div>
+      <button class="btn btn-primary" style="width:100%;padding:.9rem;font-size:1rem;margin-top:.5rem" onclick="doRegister()" id="regBtn">
+        <i class="fa fa-user-plus"></i> Create Account
+      </button>
+      <p style="text-align:center;margin-top:1rem;color:var(--text2);font-size:.85rem">
+        Already have an account? <a href="#" onclick="switchTab('login')" style="color:var(--accent2)">Login</a>
+      </p>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/js/auth.js"></script>
+<script>
+// Redirect if already logged in
+if (getToken()) location.href = '/';
+
+function switchTab(tab) {
+  document.getElementById('loginTab').classList.toggle('active', tab === 'login');
+  document.getElementById('registerTab').classList.toggle('active', tab === 'register');
+  document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) { showToast('Please fill all fields', 'error'); return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Logging in...';
+  try {
+    const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password}) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    setAuth(data.token, data.user);
+    showToast('Welcome back! 🎉', 'success');
+    setTimeout(() => location.href = data.user.is_admin ? '/admin/dashboard.html' : '/', 1000);
+  } catch(err) {
+    showToast(err.message, 'error');
+    btn.disabled = false; btn.innerHTML = '<i class="fa fa-sign-in-alt"></i> Login';
+  }
+}
+
+async function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  if (!name || !email || !password) { showToast('Please fill all fields', 'error'); return; }
+  if (password.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
+  const btn = document.getElementById('regBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Creating...';
+  try {
+    const res = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, email, password}) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Registration failed');
+    setAuth(data.token, data.user);
+    showToast('Account created successfully! 🎉', 'success');
+    setTimeout(() => location.href = '/', 1000);
+  } catch(err) {
+    showToast(err.message, 'error');
+    btn.disabled = false; btn.innerHTML = '<i class="fa fa-user-plus"></i> Create Account';
+  }
+}
+
+document.addEventListener('keypress', e => { if (e.key === 'Enter') { if (document.getElementById('loginForm').style.display !== 'none') doLogin(); else doRegister(); } });
+</script>
+</body>
+</html>
