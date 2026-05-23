@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard — ShopX Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo">ShopX</div>
+    <span class="admin-badge">ADMIN</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <a href="/admin/dashboard.html" class="nav-item"><i class="fa fa-chart-line"></i> Dashboard</a>
+    <a href="/admin/products.html" class="nav-item"><i class="fa fa-box"></i> Products</a>
+    <a href="/admin/orders.html" class="nav-item"><i class="fa fa-shopping-cart"></i> Orders</a>
+    <a href="/admin/users.html" class="nav-item"><i class="fa fa-users"></i> Users</a>
+    <div class="nav-section">Store</div>
+    <a href="/" target="_blank" class="nav-item"><i class="fa fa-store"></i> View Store</a>
+    <a href="#" class="nav-item" onclick="adminLogout()"><i class="fa fa-sign-out-alt"></i> Logout</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="admin-info">
+      <div class="admin-avatar">A</div>
+      <div><div class="admin-name" id="adminName">Admin</div><div class="admin-role" id="adminRole">Administrator</div></div>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">📊 Dashboard Overview</div>
+    <div class="topbar-actions">
+      <span style="font-size:.82rem;color:var(--text2)" id="dateTime"></span>
+      <a href="/" target="_blank" class="btn btn-outline btn-sm"><i class="fa fa-external-link-alt"></i> View Store</a>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="stat-icon purple"><i class="fa fa-shopping-cart" style="color:#a855f7"></i></div><div class="stat-value" id="s-orders">—</div><div class="stat-label">Total Orders</div></div>
+      <div class="stat-card"><div class="stat-icon green"><i class="fa fa-rupee-sign" style="color:#10b981"></i></div><div class="stat-value" id="s-revenue">—</div><div class="stat-label">Total Revenue</div></div>
+      <div class="stat-card"><div class="stat-icon gold"><i class="fa fa-users" style="color:#f59e0b"></i></div><div class="stat-value" id="s-users">—</div><div class="stat-label">Customers</div></div>
+      <div class="stat-card"><div class="stat-icon blue"><i class="fa fa-box" style="color:#3b82f6"></i></div><div class="stat-value" id="s-products">—</div><div class="stat-label">Products</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+      <!-- Order Status Breakdown -->
+      <div class="chart-card">
+        <h3>Order Status Breakdown</h3>
+        <div id="statusBreakdown"></div>
+      </div>
+      <!-- Quick Actions -->
+      <div class="chart-card">
+        <h3>Quick Actions</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.5rem">
+          <a href="/admin/products.html" class="btn btn-primary" style="justify-content:center;padding:.9rem"><i class="fa fa-plus"></i> Add Product</a>
+          <a href="/admin/orders.html" class="btn btn-outline" style="justify-content:center;padding:.9rem"><i class="fa fa-list"></i> View Orders</a>
+          <a href="/admin/users.html" class="btn btn-outline" style="justify-content:center;padding:.9rem"><i class="fa fa-users"></i> View Users</a>
+          <a href="/" target="_blank" class="btn btn-outline" style="justify-content:center;padding:.9rem"><i class="fa fa-store"></i> Open Store</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="table-card">
+      <div class="table-header"><h3>Recent Orders</h3><a href="/admin/orders.html" class="btn btn-outline btn-sm">View All</a></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Order #</th><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody id="recentOrders"><tr><td colspan="5" class="empty-row"><i class="fa fa-spinner fa-spin"></i> Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="/admin/js/admin.js"></script>
+<script>
+requireAdmin();
+
+// Update clock
+function updateClock() {
+  document.getElementById('dateTime').textContent = new Date().toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
+}
+updateClock(); setInterval(updateClock, 60000);
+
+async function loadStats() {
+  try {
+    const res = await api('/orders/admin/stats');
+    const data = await res.json();
+
+    document.getElementById('s-orders').textContent = data.totalOrders.toLocaleString();
+    document.getElementById('s-revenue').textContent = '₹' + data.totalRevenue.toLocaleString('en-IN',{maximumFractionDigits:0});
+    document.getElementById('s-users').textContent = data.totalUsers.toLocaleString();
+    document.getElementById('s-products').textContent = data.totalProducts.toLocaleString();
+
+    // Status breakdown
+    const colors = {Pending:'#f59e0b',Processing:'#3b82f6',Shipped:'#a855f7',Delivered:'#10b981',Cancelled:'#ef4444'};
+    const total = data.statusBreakdown.reduce((s,r) => s + r.count, 0) || 1;
+    document.getElementById('statusBreakdown').innerHTML = data.statusBreakdown.map(r => `
+      <div style="margin-bottom:.8rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.3rem;font-size:.85rem">
+          <span>${r.status}</span><span style="font-weight:700">${r.count}</span>
+        </div>
+        <div style="background:var(--bg3);border-radius:50px;height:8px;overflow:hidden">
+          <div style="width:${Math.round(r.count/total*100)}%;height:100%;background:${colors[r.status]||'var(--accent)'};border-radius:50px;transition:width .8s ease"></div>
+        </div>
+      </div>
+    `).join('') || '<p style="color:var(--text2);font-size:.9rem">No orders yet</p>';
+
+    // Recent orders
+    const tbody = document.getElementById('recentOrders');
+    if (!data.recentOrders.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-row">No orders yet</td></tr>';
+    } else {
+      tbody.innerHTML = data.recentOrders.map(o => `
+        <tr>
+          <td>#${o.id}</td>
+          <td>${o.user_name}</td>
+          <td style="font-weight:700;color:var(--accent2)">₹${o.total.toLocaleString('en-IN')}</td>
+          <td><span class="badge badge-${o.status.toLowerCase()}">${o.status}</span></td>
+          <td style="color:var(--text2)">${new Date(o.created_at).toLocaleDateString('en-IN')}</td>
+        </tr>
+      `).join('');
+    }
+  } catch(e) { showToast('Failed to load stats', 'error'); }
+}
+
+loadStats();
+</script>
+</body>
+</html>

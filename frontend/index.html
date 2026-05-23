@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ShopX — Premium Online Store</title>
+<meta name="description" content="Discover premium products at unbeatable prices. Shop electronics, fashion, home goods and more at ShopX.">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar" id="navbar">
+  <a href="/" class="logo">Shop<span style="color:#ec4899">X</span></a>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/#products">Products</a></li>
+    <li><a href="/#categories">Categories</a></li>
+    <li><a href="/orders.html" id="nav-orders" style="display:none">My Orders</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="btn btn-outline cart-btn" id="cartToggle" onclick="openCart()">
+      <i class="fa fa-shopping-bag"></i>
+      <span class="cart-badge" id="cartBadge">0</span>
+    </button>
+    <button class="btn btn-outline" id="authBtn" onclick="location.href='/login.html'"><i class="fa fa-user"></i> Login</button>
+    <button class="btn btn-primary" id="logoutBtn" style="display:none" onclick="logout()"><i class="fa fa-sign-out-alt"></i> Logout</button>
+    <button class="hamburger" onclick="toggleMobile()"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="/" onclick="closeMobile()">Home</a>
+  <a href="/#products" onclick="closeMobile()">Products</a>
+  <a href="/#categories" onclick="closeMobile()">Categories</a>
+  <a href="/orders.html" onclick="closeMobile()" id="mobOrders" style="display:none">My Orders</a>
+  <a href="/login.html" onclick="closeMobile()" id="mobLogin">Login</a>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-text">
+      <div class="hero-badge">✨ New Arrivals Every Week</div>
+      <h1>Shop the <span>Future</span> of Retail</h1>
+      <p>Discover curated premium products across every category. From cutting-edge electronics to timeless fashion — all in one place.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">
+          <i class="fa fa-fire"></i> Shop Now
+        </button>
+        <button class="btn btn-outline" onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">
+          <i class="fa fa-th"></i> Browse Categories
+        </button>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><div class="stat-num">10K+</div><div class="stat-label">Products</div></div>
+        <div class="stat"><div class="stat-num">50K+</div><div class="stat-label">Customers</div></div>
+        <div class="stat"><div class="stat-num">4.9★</div><div class="stat-label">Avg Rating</div></div>
+      </div>
+    </div>
+    <div class="hero-image">
+      <div class="hero-card">
+        <div class="hero-img-grid">
+          <div class="hero-img-item">💻</div>
+          <div class="hero-img-item">👗</div>
+          <div class="hero-img-item">⌚</div>
+          <div class="hero-img-item">🎧</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Categories -->
+<section id="categories">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="tag">Browse By</div>
+      <h2>Shop by Category</h2>
+      <p>Find exactly what you're looking for</p>
+    </div>
+    <div class="categories-grid" id="categoriesGrid"></div>
+  </div>
+</section>
+
+<!-- Products -->
+<section id="products">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="tag">Discover</div>
+      <h2>Featured Products</h2>
+      <p>Hand-picked premium items just for you</p>
+    </div>
+    <div class="filter-bar">
+      <input type="text" class="search-box" id="searchInput" placeholder="🔍 Search products..." oninput="filterProducts()">
+    </div>
+    <div class="products-grid" id="productsGrid">
+      <!-- Skeleton loaders -->
+      <div class="product-card"><div class="skeleton" style="width:100%;aspect-ratio:1"></div><div style="padding:1.2rem"><div class="skeleton" style="height:14px;margin-bottom:8px;width:60%"></div><div class="skeleton" style="height:20px;margin-bottom:8px"></div><div class="skeleton" style="height:14px;width:80%"></div></div></div>
+      <div class="product-card"><div class="skeleton" style="width:100%;aspect-ratio:1"></div><div style="padding:1.2rem"><div class="skeleton" style="height:14px;margin-bottom:8px;width:60%"></div><div class="skeleton" style="height:20px;margin-bottom:8px"></div><div class="skeleton" style="height:14px;width:80%"></div></div></div>
+      <div class="product-card"><div class="skeleton" style="width:100%;aspect-ratio:1"></div><div style="padding:1.2rem"><div class="skeleton" style="height:14px;margin-bottom:8px;width:60%"></div><div class="skeleton" style="height:20px;margin-bottom:8px"></div><div class="skeleton" style="height:14px;width:80%"></div></div></div>
+      <div class="product-card"><div class="skeleton" style="width:100%;aspect-ratio:1"></div><div style="padding:1.2rem"><div class="skeleton" style="height:14px;margin-bottom:8px;width:60%"></div><div class="skeleton" style="height:20px;margin-bottom:8px"></div><div class="skeleton" style="height:14px;width:80%"></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Cart Sidebar -->
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+<div class="cart-sidebar" id="cartSidebar">
+  <div class="cart-header">
+    <h3>🛒 Your Cart</h3>
+    <button class="close-btn" onclick="closeCart()"><i class="fa fa-times"></i></button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer" id="cartFooter" style="display:none">
+    <div class="cart-total"><span>Total</span><span id="cartTotal" class="price">₹0</span></div>
+    <button class="btn btn-primary checkout-btn" onclick="openCheckout()"><i class="fa fa-credit-card"></i> Proceed to Checkout</button>
+  </div>
+</div>
+
+<!-- Checkout Modal -->
+<div class="modal-overlay" id="checkoutModal">
+  <div class="modal">
+    <h3>📦 Complete Your Order</h3>
+    <div class="form-group"><label>Full Name</label><input type="text" id="shipName" placeholder="John Doe"></div>
+    <div class="form-group"><label>Phone Number</label><input type="tel" id="shipPhone" placeholder="+91 9876543210"></div>
+    <div class="form-group"><label>Delivery Address</label><textarea id="shipAddress" rows="2" placeholder="House No, Street, Landmark"></textarea></div>
+    <div class="form-group"><label>City</label><input type="text" id="shipCity" placeholder="Mumbai"></div>
+    <div class="form-group"><label>Payment Method</label>
+      <select id="payMethod"><option value="COD">Cash on Delivery</option><option value="Online">Online Payment</option></select>
+    </div>
+    <div style="display:flex;gap:1rem;margin-top:1.5rem">
+      <button class="btn btn-outline" onclick="closeCheckout()" style="flex:1">Cancel</button>
+      <button class="btn btn-primary" onclick="placeOrder()" style="flex:2"><i class="fa fa-check"></i> Place Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div class="logo">Shop<span style="color:#ec4899">X</span></div>
+      <p>Your one-stop destination for premium products. Quality guaranteed, happiness delivered.</p>
+    </div>
+    <div class="footer-col"><h4>Shop</h4><ul>
+      <li><a href="/#products">All Products</a></li>
+      <li><a href="/#categories">Categories</a></li>
+      <li><a href="/orders.html">My Orders</a></li>
+    </ul></div>
+    <div class="footer-col"><h4>Support</h4><ul>
+      <li><a href="#">Contact Us</a></li>
+      <li><a href="#">Returns</a></li>
+      <li><a href="#">FAQ</a></li>
+    </ul></div>
+    <div class="footer-col"><h4>Legal</h4><ul>
+      <li><a href="#">Privacy Policy</a></li>
+      <li><a href="#">Terms of Use</a></li>
+    </ul></div>
+  </div>
+  <div class="footer-bottom">© 2024 ShopX. All rights reserved. Built with ❤️</div>
+</footer>
+
+<script src="/js/auth.js"></script>
+<script src="/js/cart.js"></script>
+<script src="/js/main.js"></script>
+</body>
+</html>

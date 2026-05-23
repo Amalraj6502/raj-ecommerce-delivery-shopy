@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Orders — ShopX Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><div class="logo">ShopX</div><span class="admin-badge">ADMIN</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <a href="/admin/dashboard.html" class="nav-item"><i class="fa fa-chart-line"></i> Dashboard</a>
+    <a href="/admin/products.html" class="nav-item"><i class="fa fa-box"></i> Products</a>
+    <a href="/admin/orders.html" class="nav-item active"><i class="fa fa-shopping-cart"></i> Orders</a>
+    <a href="/admin/users.html" class="nav-item"><i class="fa fa-users"></i> Users</a>
+    <div class="nav-section">Store</div>
+    <a href="/" target="_blank" class="nav-item"><i class="fa fa-store"></i> View Store</a>
+    <a href="#" class="nav-item" onclick="adminLogout()"><i class="fa fa-sign-out-alt"></i> Logout</a>
+  </nav>
+  <div class="sidebar-footer"><div class="admin-info"><div class="admin-avatar">A</div><div><div class="admin-name" id="adminName">Admin</div><div class="admin-role">Administrator</div></div></div></div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">🛒 Orders Management</div>
+    <div class="topbar-actions">
+      <button class="btn btn-outline btn-sm" onclick="loadOrders()"><i class="fa fa-sync"></i> Refresh</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="table-card">
+      <div class="table-header">
+        <h3>All Orders <span id="orderCount" style="color:var(--text2);font-weight:400;font-size:.85rem"></span></h3>
+        <div class="filter-bar">
+          <input type="text" class="filter-input" id="searchInput" placeholder="🔍 Search orders..." oninput="filterOrders()">
+          <select class="filter-input" id="statusFilter" onchange="filterOrders()">
+            <option value="">All Statuses</option>
+            <option>Pending</option><option>Processing</option><option>Shipped</option><option>Delivered</option><option>Cancelled</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>#</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th><th>Update</th></tr></thead>
+          <tbody id="ordersTable"><tr><td colspan="8" class="empty-row"><i class="fa fa-spinner fa-spin"></i> Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal-overlay" id="orderModal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h3 id="orderModalTitle">Order Details</h3>
+      <button class="close-btn" onclick="closeOrderModal()"><i class="fa fa-times"></i></button>
+    </div>
+    <div id="orderModalContent"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="/admin/js/admin.js"></script>
+<script>
+requireAdmin();
+let allOrders = [];
+const STATUSES = ['Pending','Processing','Shipped','Delivered','Cancelled'];
+
+async function loadOrders() {
+  document.getElementById('ordersTable').innerHTML = '<tr><td colspan="8" class="empty-row"><i class="fa fa-spinner fa-spin"></i> Loading...</td></tr>';
+  try {
+    const res = await api('/orders/admin/all?limit=200');
+    allOrders = await res.json();
+    filterOrders();
+  } catch(e) { showToast('Failed to load orders', 'error'); }
+}
+
+function filterOrders() {
+  const s = document.getElementById('searchInput').value.toLowerCase();
+  const st = document.getElementById('statusFilter').value;
+  let f = allOrders;
+  if (s) f = f.filter(o => String(o.id).includes(s) || o.user_name.toLowerCase().includes(s) || o.user_email.toLowerCase().includes(s));
+  if (st) f = f.filter(o => o.status === st);
+  renderOrders(f);
+}
+
+function renderOrders(orders) {
+  document.getElementById('orderCount').textContent = `(${orders.length})`;
+  const tbody = document.getElementById('ordersTable');
+  if (!orders.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-row">No orders found</td></tr>'; return; }
+  tbody.innerHTML = orders.map(o => `
+    <tr>
+      <td><a href="#" onclick="viewOrder(${o.id})" style="color:var(--accent2);font-weight:700">#${o.id}</a></td>
+      <td>
+        <div style="font-weight:600">${o.user_name}</div>
+        <div style="font-size:.75rem;color:var(--text2)">${o.user_email}</div>
+      </td>
+      <td>${o.item_count} item${o.item_count!==1?'s':''}</td>
+      <td style="font-weight:700;color:var(--accent2)">₹${o.total.toLocaleString('en-IN')}</td>
+      <td style="color:var(--text2)">${o.payment_method}</td>
+      <td><span class="badge badge-${o.status.toLowerCase()}">${o.status}</span></td>
+      <td style="color:var(--text2);font-size:.82rem">${new Date(o.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+      <td>
+        <select class="status-select" onchange="updateStatus(${o.id}, this.value, this)">
+          ${STATUSES.map(s => `<option ${s===o.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function updateStatus(orderId, status, selectEl) {
+  const originalStatus = selectEl.getAttribute('data-prev') || selectEl.value;
+  try {
+    const res = await api(`/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) throw new Error('Update failed');
+    const order = allOrders.find(o => o.id === orderId);
+    if (order) order.status = status;
+    showToast(`Order #${orderId} → ${status}`, 'success');
+    // Update badge in same row
+    const badge = selectEl.closest('tr').querySelector('.badge');
+    if (badge) { badge.className = `badge badge-${status.toLowerCase()}`; badge.textContent = status; }
+  } catch(err) {
+    showToast(err.message, 'error');
+    selectEl.value = originalStatus;
+  }
+}
+
+function viewOrder(id) {
+  const o = allOrders.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('orderModalTitle').textContent = `Order #${o.id} — ${o.status}`;
+  document.getElementById('orderModalContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem">
+      <div style="background:var(--bg3);border-radius:10px;padding:1rem">
+        <div style="font-size:.75rem;color:var(--text2);margin-bottom:.5rem">CUSTOMER</div>
+        <div style="font-weight:600">${o.user_name}</div>
+        <div style="font-size:.85rem;color:var(--text2)">${o.user_email}</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:1rem">
+        <div style="font-size:.75rem;color:var(--text2);margin-bottom:.5rem">SHIPPING</div>
+        <div style="font-weight:600">${o.shipping_name}</div>
+        <div style="font-size:.82rem;color:var(--text2)">${o.shipping_address}, ${o.shipping_city}</div>
+        <div style="font-size:.82rem;color:var(--text2)">${o.shipping_phone}</div>
+      </div>
+    </div>
+    <div style="background:var(--bg3);border-radius:10px;padding:1rem;margin-bottom:1rem">
+      <div style="font-size:.75rem;color:var(--text2);margin-bottom:.75rem">ORDER ITEMS</div>
+      ${(o.items||[]).map(item => `
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
+          <div style="width:40px;height:40px;border-radius:6px;background:var(--bg2);overflow:hidden;flex-shrink:0">
+            <img src="/uploads/${item.image}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent='🛍️'">
+          </div>
+          <div style="flex:1"><div style="font-size:.88rem;font-weight:600">${item.name}</div><div style="font-size:.78rem;color:var(--text2)">Qty: ${item.quantity} × ₹${item.price.toLocaleString('en-IN')}</div></div>
+          <div style="font-weight:700;color:var(--accent2)">₹${(item.price*item.quantity).toLocaleString('en-IN')}</div>
+        </div>
+      `).join('')}
+      <div style="display:flex;justify-content:space-between;margin-top:1rem;font-size:1rem;font-weight:700">
+        <span>Total</span><span style="color:var(--accent2)">₹${o.total.toLocaleString('en-IN')}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;align-items:center">
+      <span style="font-size:.85rem;color:var(--text2)">Update Status:</span>
+      <select class="status-select" style="flex:1" onchange="updateStatus(${o.id},this.value,this);closeOrderModal();loadOrders()">
+        ${STATUSES.map(s => `<option ${s===o.status?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+  `;
+  document.getElementById('orderModal').classList.add('open');
+}
+
+function closeOrderModal() { document.getElementById('orderModal').classList.remove('open'); }
+
+loadOrders();
+</script>
+</body>
+</html>
