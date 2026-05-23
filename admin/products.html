@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Products — ShopX Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><div class="logo">ShopX</div><span class="admin-badge">ADMIN</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <a href="/admin/dashboard.html" class="nav-item"><i class="fa fa-chart-line"></i> Dashboard</a>
+    <a href="/admin/products.html" class="nav-item active"><i class="fa fa-box"></i> Products</a>
+    <a href="/admin/orders.html" class="nav-item"><i class="fa fa-shopping-cart"></i> Orders</a>
+    <a href="/admin/users.html" class="nav-item"><i class="fa fa-users"></i> Users</a>
+    <div class="nav-section">Store</div>
+    <a href="/" target="_blank" class="nav-item"><i class="fa fa-store"></i> View Store</a>
+    <a href="#" class="nav-item" onclick="adminLogout()"><i class="fa fa-sign-out-alt"></i> Logout</a>
+  </nav>
+  <div class="sidebar-footer"><div class="admin-info"><div class="admin-avatar">A</div><div><div class="admin-name" id="adminName">Admin</div><div class="admin-role">Administrator</div></div></div></div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">📦 Products Management</div>
+    <div class="topbar-actions">
+      <button class="btn btn-primary" onclick="openProductModal()"><i class="fa fa-plus"></i> Add Product</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="table-card">
+      <div class="table-header">
+        <h3>All Products <span id="productCount" style="color:var(--text2);font-weight:400;font-size:.85rem"></span></h3>
+        <div class="filter-bar">
+          <input type="text" class="filter-input" id="searchInput" placeholder="🔍 Search products..." oninput="filterProducts()">
+          <select class="filter-input" id="catFilter" onchange="filterProducts()"><option value="">All Categories</option></select>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Featured</th><th>Actions</th></tr></thead>
+          <tbody id="productsTable"><tr><td colspan="7" class="empty-row"><i class="fa fa-spinner fa-spin"></i> Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Add New Product</h3>
+      <button class="close-btn" onclick="closeProductModal()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Product Name *</label><input type="text" id="pName" placeholder="Product name"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="pCategory"><option value="">Select Category</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Description</label><textarea id="pDesc" rows="3" placeholder="Product description..."></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Selling Price (₹) *</label><input type="number" id="pPrice" placeholder="999"></div>
+      <div class="form-group"><label>Original Price (₹)</label><input type="number" id="pOriginal" placeholder="1499"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Stock Quantity</label><input type="number" id="pStock" placeholder="100" value="100"></div>
+      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:.2rem">
+        <label class="form-check"><input type="checkbox" id="pFeatured"> Mark as Featured</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Product Image</label>
+      <div class="upload-area" id="uploadArea" onclick="document.getElementById('pImage').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+        <i class="fa fa-cloud-upload-alt" style="font-size:2rem;color:var(--accent2)"></i>
+        <p>Click to upload or drag & drop</p>
+        <p style="font-size:.75rem;margin-top:.25rem">PNG, JPG, WEBP up to 5MB</p>
+        <img id="uploadPreview" class="upload-preview" alt="Preview">
+      </div>
+      <input type="file" id="pImage" accept="image/*" style="display:none" onchange="previewImage(this)">
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1rem">
+      <button class="btn btn-outline" onclick="closeProductModal()" style="flex:1">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProduct()" style="flex:2" id="saveBtn"><i class="fa fa-save"></i> Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div style="font-size:3rem;margin-bottom:1rem">🗑️</div>
+    <h3>Delete Product?</h3>
+    <p style="color:var(--text2);margin:.75rem 0 1.5rem">This action cannot be undone. The product will be permanently deleted.</p>
+    <div style="display:flex;gap:.75rem">
+      <button class="btn btn-outline" onclick="closeDeleteModal()" style="flex:1">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()" style="flex:1" id="deleteBtn"><i class="fa fa-trash"></i> Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="/admin/js/admin.js"></script>
+<script>
+requireAdmin();
+let allProducts = [], categories = [], editingId = null, deletingId = null;
+
+async function loadData() {
+  try {
+    const [pRes, cRes] = await Promise.all([api('/products'), api('/products/meta/categories')]);
+    allProducts = await pRes.json();
+    categories = await cRes.json();
+    const catSel = document.getElementById('pCategory');
+    const catFilter = document.getElementById('catFilter');
+    categories.forEach(c => {
+      catSel.innerHTML += `<option value="${c.id}">${c.icon} ${c.name}</option>`;
+      catFilter.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+    });
+    renderProducts(allProducts);
+  } catch(e) { showToast('Failed to load products', 'error'); }
+}
+
+function filterProducts() {
+  const s = document.getElementById('searchInput').value.toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  let f = allProducts;
+  if (s) f = f.filter(p => p.name.toLowerCase().includes(s) || (p.description||'').toLowerCase().includes(s));
+  if (cat) f = f.filter(p => String(p.category_id) === cat);
+  renderProducts(f);
+}
+
+function renderProducts(products) {
+  document.getElementById('productCount').textContent = `(${products.length})`;
+  const tbody = document.getElementById('productsTable');
+  if (!products.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-row">No products found</td></tr>'; return; }
+  tbody.innerHTML = products.map(p => `
+    <tr>
+      <td>
+        <div class="product-thumb">
+          <img src="/uploads/${p.image}" style="width:44px;height:44px;border-radius:8px;object-fit:cover" onerror="this.parentElement.textContent='🛍️'">
+        </div>
+      </td>
+      <td><div style="font-weight:600">${p.name}</div><div style="font-size:.75rem;color:var(--text2);margin-top:.15rem">${(p.description||'').slice(0,50)}${(p.description||'').length>50?'...':''}</div></td>
+      <td style="color:var(--text2)">${p.category_name||'—'}</td>
+      <td>
+        <span style="font-weight:700;color:var(--accent2)">₹${p.price.toLocaleString('en-IN')}</span>
+        ${p.original_price ? `<br><span style="font-size:.75rem;color:var(--text2);text-decoration:line-through">₹${p.original_price.toLocaleString('en-IN')}</span>` : ''}
+      </td>
+      <td><span style="color:${p.stock < 10 ? 'var(--danger)' : 'var(--success)'};font-weight:700">${p.stock}</span></td>
+      <td>${p.is_featured ? '<span class="badge badge-delivered">⭐ Yes</span>' : '<span style="color:var(--text2)">—</span>'}</td>
+      <td>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn btn-outline btn-sm" onclick="openEditModal(${p.id})"><i class="fa fa-edit"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="openDeleteModal(${p.id})"><i class="fa fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openProductModal(id = null) {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add New Product';
+  document.getElementById('saveBtn').innerHTML = '<i class="fa fa-save"></i> Save Product';
+  document.getElementById('pName').value = '';
+  document.getElementById('pDesc').value = '';
+  document.getElementById('pPrice').value = '';
+  document.getElementById('pOriginal').value = '';
+  document.getElementById('pStock').value = '100';
+  document.getElementById('pCategory').value = '';
+  document.getElementById('pFeatured').checked = false;
+  document.getElementById('uploadPreview').style.display = 'none';
+  document.getElementById('pImage').value = '';
+  document.getElementById('productModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Product';
+  document.getElementById('saveBtn').innerHTML = '<i class="fa fa-save"></i> Update Product';
+  document.getElementById('pName').value = p.name;
+  document.getElementById('pDesc').value = p.description || '';
+  document.getElementById('pPrice').value = p.price;
+  document.getElementById('pOriginal').value = p.original_price || '';
+  document.getElementById('pStock').value = p.stock;
+  document.getElementById('pCategory').value = p.category_id || '';
+  document.getElementById('pFeatured').checked = !!p.is_featured;
+  const prev = document.getElementById('uploadPreview');
+  prev.src = `/uploads/${p.image}`; prev.style.display = 'block';
+  document.getElementById('productModal').classList.add('open');
+}
+
+function closeProductModal() { document.getElementById('productModal').classList.remove('open'); }
+
+function previewImage(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => { const prev = document.getElementById('uploadPreview'); prev.src = e.target.result; prev.style.display = 'block'; };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function handleDrop(e) {
+  e.preventDefault(); e.currentTarget.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const dt = new DataTransfer(); dt.items.add(file);
+    document.getElementById('pImage').files = dt.files;
+    previewImage(document.getElementById('pImage'));
+  }
+}
+
+async function saveProduct() {
+  const name = document.getElementById('pName').value.trim();
+  const price = document.getElementById('pPrice').value;
+  if (!name || !price) { showToast('Name and price are required', 'error'); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving...';
+
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('description', document.getElementById('pDesc').value);
+  fd.append('price', price);
+  fd.append('original_price', document.getElementById('pOriginal').value);
+  fd.append('category_id', document.getElementById('pCategory').value);
+  fd.append('stock', document.getElementById('pStock').value);
+  fd.append('is_featured', document.getElementById('pFeatured').checked ? '1' : '0');
+  const imageFile = document.getElementById('pImage').files[0];
+  if (imageFile) fd.append('image', imageFile);
+
+  try {
+    const url = editingId ? `/products/${editingId}` : '/products';
+    const method = editingId ? 'PUT' : 'POST';
+    const res = await fetch('/api' + url, { method, headers: { Authorization: `Bearer ${getToken()}` }, body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Save failed');
+    showToast(editingId ? 'Product updated!' : 'Product added!', 'success');
+    closeProductModal();
+    await loadData();
+  } catch(err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fa fa-save"></i> ' + (editingId ? 'Update' : 'Save') + ' Product';
+  }
+}
+
+function openDeleteModal(id) { deletingId = id; document.getElementById('deleteModal').classList.add('open'); }
+function closeDeleteModal() { deletingId = null; document.getElementById('deleteModal').classList.remove('open'); }
+
+async function confirmDelete() {
+  if (!deletingId) return;
+  const btn = document.getElementById('deleteBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+  try {
+    const res = await api(`/products/${deletingId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    showToast('Product deleted', 'success');
+    closeDeleteModal();
+    await loadData();
+  } catch(err) {
+    showToast(err.message, 'error');
+    btn.disabled = false; btn.innerHTML = '<i class="fa fa-trash"></i> Delete';
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>

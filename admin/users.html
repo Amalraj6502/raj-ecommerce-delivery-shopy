@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Users — ShopX Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><div class="logo">ShopX</div><span class="admin-badge">ADMIN</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <a href="/admin/dashboard.html" class="nav-item"><i class="fa fa-chart-line"></i> Dashboard</a>
+    <a href="/admin/products.html" class="nav-item"><i class="fa fa-box"></i> Products</a>
+    <a href="/admin/orders.html" class="nav-item"><i class="fa fa-shopping-cart"></i> Orders</a>
+    <a href="/admin/users.html" class="nav-item active"><i class="fa fa-users"></i> Users</a>
+    <div class="nav-section">Store</div>
+    <a href="/" target="_blank" class="nav-item"><i class="fa fa-store"></i> View Store</a>
+    <a href="#" class="nav-item" onclick="adminLogout()"><i class="fa fa-sign-out-alt"></i> Logout</a>
+  </nav>
+  <div class="sidebar-footer"><div class="admin-info"><div class="admin-avatar">A</div><div><div class="admin-name" id="adminName">Admin</div><div class="admin-role">Administrator</div></div></div></div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">👥 Users</div>
+    <div class="topbar-actions">
+      <button class="btn btn-outline btn-sm" onclick="loadUsers()"><i class="fa fa-sync"></i> Refresh</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Registered Users <span id="userCount" style="color:var(--text2);font-weight:400;font-size:.85rem"></span></h3>
+        <input type="text" class="filter-input" id="searchInput" placeholder="🔍 Search users..." oninput="filterUsers()">
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+          <tbody id="usersTable"><tr><td colspan="5" class="empty-row"><i class="fa fa-spinner fa-spin"></i> Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="/admin/js/admin.js"></script>
+<script>
+requireAdmin();
+let allUsers = [];
+
+async function loadUsers() {
+  try {
+    const res = await api('/auth/users');
+    allUsers = await res.json();
+    filterUsers();
+  } catch(e) { showToast('Failed to load users', 'error'); }
+}
+
+function filterUsers() {
+  const s = document.getElementById('searchInput').value.toLowerCase();
+  const f = s ? allUsers.filter(u => u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s)) : allUsers;
+  document.getElementById('userCount').textContent = `(${f.length})`;
+  const tbody = document.getElementById('usersTable');
+  if (!f.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-row">No users found</td></tr>'; return; }
+  tbody.innerHTML = f.map(u => `
+    <tr>
+      <td style="color:var(--text2)">${u.id}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0">
+            ${u.name.charAt(0).toUpperCase()}
+          </div>
+          <span style="font-weight:600">${u.name}</span>
+        </div>
+      </td>
+      <td style="color:var(--text2)">${u.email}</td>
+      <td><span class="badge ${u.is_admin ? 'badge-admin' : 'badge-user'}">${u.is_admin ? '⚡ Admin' : '👤 User'}</span></td>
+      <td style="color:var(--text2);font-size:.82rem">${new Date(u.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+    </tr>
+  `).join('');
+}
+
+loadUsers();
+</script>
+</body>
+</html>
